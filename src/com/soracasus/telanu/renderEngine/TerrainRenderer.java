@@ -10,16 +10,16 @@ import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
 import com.soracasus.telanu.models.RawModel;
-import com.soracasus.telanu.shaders.TerrainShader;
+import com.soracasus.telanu.shaders.TerrainShaderOld;
 import com.soracasus.telanu.terrains.Terrain;
 import com.soracasus.telanu.textures.TerrainTexturePack;
 import com.soracasus.telanu.toolbox.Maths;
 
 public class TerrainRenderer {
 
-	private TerrainShader shader;
+	private TerrainShaderOld shader;
 	
-	public TerrainRenderer(TerrainShader shader, Matrix4f projectionMatrix){
+	public TerrainRenderer(TerrainShaderOld shader, Matrix4f projectionMatrix){
 		this.shader = shader;
 		shader.start();
 		shader.loadProjectionMatrix(projectionMatrix);

@@ -1,182 +1,198 @@
 package com.soracasus.telanu.shaders;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.FloatBuffer;
-
 import com.soracasus.telanu.core.REFile;
-import org.lwjgl.BufferUtils;
+import com.soracasus.telanu.shaders.uniform.Uniform;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
-import org.lwjgl.util.vector.Matrix4f;
-import org.lwjgl.util.vector.Vector2f;
-import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.opengl.GL32;
 
-public abstract class ShaderProgram {
+import java.io.BufferedReader;
+import java.io.IOException;
+
+public class ShaderProgram {
 
 	private int programID;
-	private int vertexShaderID;
-	private int fragmentShaderID;
 
-	private static FloatBuffer matrixBuffer = BufferUtils.createFloatBuffer(16);
+	public ShaderProgram (REFile shader, String... inVars) {
+		ShaderIDs ids = loadShader(shader);
+		this.programID = GL20.glCreateProgram();
 
-	public ShaderProgram(REFile shaderFile) {
-		ShaderIDs ids = parseShader(shaderFile);
-	}
+		GL20.glUseProgram(programID);
 
-	public ShaderProgram(String vertexFile, String fragmentFile) {
-		vertexShaderID = loadShader(vertexFile, GL20.GL_VERTEX_SHADER);
-		fragmentShaderID = loadShader(fragmentFile, GL20.GL_FRAGMENT_SHADER);
-		programID = GL20.glCreateProgram();
-		GL20.glAttachShader(programID, vertexShaderID);
-		GL20.glAttachShader(programID, fragmentShaderID);
-		bindAttributes();
+		if (ids.vertID != -1)
+			GL20.glAttachShader(programID, ids.vertID);
+		if (ids.fragID != -1)
+			GL20.glAttachShader(programID, ids.fragID);
+		if (ids.geomID != -1)
+			GL20.glAttachShader(programID, ids.geomID);
+
+		// Bind Attributes
+
 		GL20.glLinkProgram(programID);
+		if (checkError(programID, true, GL20.GL_LINK_STATUS)) {
+			System.err.println("Could not link program!");
+		}
+
+		if (ids.vertID != -1) {
+			GL20.glDetachShader(programID, ids.vertID);
+			GL20.glDeleteShader(ids.vertID);
+		}
+
+		if (ids.fragID != -1) {
+			GL20.glDetachShader(programID, ids.fragID);
+			GL20.glDeleteShader(ids.fragID);
+		}
+
+		if (ids.geomID != -1) {
+			GL20.glDetachShader(programID, ids.geomID);
+			GL20.glDeleteShader(ids.geomID);
+		}
+
+	}
+
+	protected void storeUniformLocations (@NotNull Uniform... uniforms) {
+		for (Uniform u : uniforms) {
+			u.storeUniformLocation(programID);
+		}
 		GL20.glValidateProgram(programID);
-		getAllUniformLocations();
+		checkError(programID, true, GL20.GL_VALIDATE_STATUS);
 	}
 
-	protected abstract void getAllUniformLocations();
-
-	protected int getUniformLocation(String uniformName) {
-		return GL20.glGetUniformLocation(programID, uniformName);
-	}
-
-	public void start() {
+	public void start () {
 		GL20.glUseProgram(programID);
 	}
 
-	public void stop() {
+	public void stop () {
 		GL20.glUseProgram(0);
 	}
 
-	public void cleanUp() {
-
-		stop();
-		GL20.glDetachShader(programID, vertexShaderID);
-		GL20.glDetachShader(programID, fragmentShaderID);
-		GL20.glDeleteShader(vertexShaderID);
-		GL20.glDeleteShader(fragmentShaderID);
-		GL20.glDeleteProgram(programID);
+	private void bindAttributes (@NotNull String[] inVars) {
+		for (int i = 0; i < inVars.length; i++)
+			GL20.glBindAttribLocation(programID, i, inVars[i]);
 	}
 
-	protected abstract void bindAttributes();
+	private void loadInclude (@NotNull StringBuilder curr, @NotNull String line) {
+		String name = line.substring(9);
+		REFile include = new REFile("shaders/include/" + name);
 
-	protected void bindAttribute(int attribute, String variableName) {
-		GL20.glBindAttribLocation(programID, attribute, variableName);
-	}
-
-	protected void loadFloat(int location, float value) {
-		GL20.glUniform1f(location, value);
-	}
-
-	protected void loadInt(int location, int value) {
-		GL20.glUniform1i(location, value);
-	}
-
-	protected void loadVector(int location, Vector3f vector) {
-		GL20.glUniform3f(location, vector.x, vector.y, vector.z);
-	}
-
-	protected void load2DVector(int location, Vector2f vector) {
-		GL20.glUniform2f(location, vector.x, vector.y);
-	}
-
-	protected void loadBoolean(int location, boolean value) {
-		float toLoad = 0;
-
-		if (value) {
-			toLoad = 1;
-		}
-		GL20.glUniform1f(location, toLoad);
-	}
-
-	protected void loadMatrix(int location, Matrix4f matrix) {
-		matrix.store(matrixBuffer);
-		matrixBuffer.flip();
-		GL20.glUniformMatrix4(location, false, matrixBuffer);
-	}
-
-	private static int loadShader(String file, int type) {
-
-		StringBuilder shaderSource = new StringBuilder();
-
-		try {
-			BufferedReader reader = new BufferedReader(new FileReader(file));
-
-			String line;
-
-			while ((line = reader.readLine()) != null) {
-				shaderSource.append(line).append("//\n");
+		try (BufferedReader reader = include.getReader()) {
+			String l;
+			while ((l = reader.readLine()) != null) {
+				if (l.startsWith("#include")) {
+					loadInclude(curr, l);
+					continue;
+				}
+				curr.append(l).append("\n");
 			}
-			reader.close();
 		} catch (IOException e) {
-			System.err.println("Could not read file!");
 			e.printStackTrace();
-			System.exit(-1);
 		}
-		int shaderID = GL20.glCreateShader(type);
-		GL20.glShaderSource(shaderID, shaderSource);
-		GL20.glCompileShader(shaderID);
-		if (GL20.glGetShader(shaderID, GL20.GL_COMPILE_STATUS) == GL11.GL_FALSE) {
-			System.out.println(GL20.glGetShaderInfoLog(shaderID, 500));
-			System.err.println("Could not compile shader " + file);
-			System.exit(-1);
-		}
-		return shaderID;
 	}
 
-	private ShaderIDs parseShader(REFile shaderFile) {
+	private ShaderIDs loadShader (REFile shader) {
+		ShaderIDs ids = new ShaderIDs();
+
 		StringBuilder vertSrc = new StringBuilder();
 		StringBuilder fragSrc = new StringBuilder();
 		StringBuilder geomSrc = new StringBuilder();
+		/*
+		LWJGL2 Does not support OpenGL 4.3+
+		Todo(Sora): Migrate to LWJGL3
+		StringBuilder tessCtrlSrc = new StringBuilder();
+		StringBuilder tessEvalSrc = new StringBuilder();
+		 */
+
 		StringBuilder current = null;
-		try {
-			BufferedReader reader = shaderFile.getReader();
-			String s;
-			while((s = reader.readLine()) != null) {
-				if(s.startsWith("#shader")) {
-					String _s = s.toLowerCase();
-					if(_s.contains("vertex")) {
+
+		try (BufferedReader reader = shader.getReader()) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+				// Check for the shader type
+				if (line.startsWith("#shader")) {
+					if (line.startsWith("#shader vertex")) {
 						current = vertSrc;
-					} else if (_s.contains("fragment")) {
+					} else if (line.startsWith("#shader fragment")) {
 						current = fragSrc;
-					} else if (_s.contains("geometry")) {
+					} else if (line.startsWith("#shader geometry")) {
 						current = geomSrc;
 					} else {
-						System.err.println("Shader preprocessor not recognized: " + s);
+						System.err.println("Shader Error: Unrecognized preprocessor: " + line);
+						return loadShader(new REFile("shaders/default.res"));
 					}
-				} else {
-					if(current == null) {
-						// If the shader is not correctly formatted, inform user and default to the
-						// fallback shader with bare minimum
-						System.err.println("Shader: " + shaderFile.toString() + "\n\n Not correctly formatted!");
-						return parseShader(new REFile("shaders/fallback.rsh"));
-					} else {
-						current.append(s);
-					}
+					continue;
+				} else if (current == null) {
+					System.err.println("Shader Error: Improper shader formatting! " +
+							"\n No shader is selected, make sure #shader preprocessor is defined");
+					return loadShader(new REFile("shaders/default.res"));
+				} else if (line.startsWith("#include")) {
+					loadInclude(current, line);
+					continue;
 				}
+				current.append(line).append("\n");
+
 			}
-		} catch(IOException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
-			System.err.println("Shader: " + shaderFile.toString() + " Could not be read");
-			return parseShader(new REFile("shaders/fallback.rsh"));
 		}
 
+		ids.vertID = createShader(vertSrc, GL20.GL_VERTEX_SHADER);
+		ids.fragID = createShader(fragSrc, GL20.GL_FRAGMENT_SHADER);
+		ids.geomID = createShader(geomSrc, GL32.GL_GEOMETRY_SHADER);
 
-
-
+		return ids;
 	}
 
-	private class ShaderIDs {
-		public int vertID;
-		public int fragID;
-		public int geomID;
-		// Note(Sora): OpenGL 4.5 is not supported by LWJGL 2
-		// Todo(Sora): Migrate to LWJGL and add tesselation support
-		// public int tessCtrlID;
-		// public int tessEvalID;
+	private int createShader (@NotNull StringBuilder source, int type) {
+		if (source.length() == 0) return -1;
+		int id = GL20.glCreateShader(type);
+
+		GL20.glShaderSource(id, source.toString());
+		GL20.glCompileShader(id);
+		if (checkError(id, false, GL20.GL_COMPILE_STATUS)) {
+			return -1;
+		}
+		return id;
+	}
+
+	/**
+	 * Checks whether an error has occurred on the given flag
+	 *
+	 * @param id
+	 * 		The ID of the object to check the error on
+	 * @param isProgram
+	 * 		Whether the object is a program or not
+	 * @param flag
+	 * 		The flag to be checked
+	 *
+	 * @return True if an error has occurred, false otherwise
+	 */
+	private boolean checkError (int id, boolean isProgram, int flag) {
+		if (isProgram) {
+			int res = GL20.glGetProgram(id, flag);
+			if (res != GL11.GL_TRUE) {
+				int length = GL20.glGetProgram(id, GL20.GL_INFO_LOG_LENGTH);
+				String log = GL20.glGetProgramInfoLog(id, length);
+				System.err.println(log);
+				return true;
+			}
+		} else {
+			int res = GL20.glGetShader(id, flag);
+			if (res != GL11.GL_TRUE) {
+				int length = GL20.glGetShader(id, GL20.GL_INFO_LOG_LENGTH);
+				String log = GL20.glGetShaderInfoLog(id, length);
+				System.err.println(log);
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	private static class ShaderIDs {
+		int vertID = -1;
+		int fragID = -1;
+		int geomID = -1;
 	}
 
 }

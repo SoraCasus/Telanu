@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.soracasus.telanu.shaders.BasicShader;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector2f;
@@ -15,11 +16,12 @@ import com.soracasus.telanu.entities.Light;
 import com.soracasus.telanu.guis.GuiRenderer;
 import com.soracasus.telanu.guis.GuiTexture;
 import com.soracasus.telanu.models.TexturedModel;
-import com.soracasus.telanu.shaders.StaticShader;
-import com.soracasus.telanu.shaders.TerrainShader;
+import com.soracasus.telanu.shaders.StaticShaderOld;
+import com.soracasus.telanu.shaders.TerrainShaderOld;
 import com.soracasus.telanu.skybox.SkyboxRenderer;
 import com.soracasus.telanu.terrains.Terrain;
 import com.soracasus.telanu.toolbox.Maths;
+import org.lwjgl.util.vector.Vector3f;
 
 public class MasterRenderer {
 
@@ -29,12 +31,12 @@ public class MasterRenderer {
 	private static final float BLUE = 0.69f;
 
 	private Matrix4f projectionMatrix;
-	
-	private StaticShader shader = new StaticShader();
+
+	private BasicShader shader = new BasicShader();
 	private EntityRenderer renderer;
 	
 	private TerrainRenderer terrainRenderer;
-	private TerrainShader terrainShader = new TerrainShader();
+	private TerrainShaderOld terrainShader = new TerrainShaderOld();
 	
 	
 	private Map<TexturedModel, List<Entity>> entities = new HashMap<TexturedModel, List<Entity>>();
@@ -78,9 +80,20 @@ public class MasterRenderer {
 		prepare();
 
 		shader.start();
-		shader.loadSkyColour(RED, GREEN, BLUE);
-		shader.loadLights(lights);
-		shader.loadViewMatrix(camera);
+		shader.skyColour.load(new Vector3f(RED, GREEN, BLUE));
+		Vector3f[] lightPos = new Vector3f[lights.size()];
+		Vector3f[] lightColour = new Vector3f[lights.size()];
+		Vector3f[] attenuation = new Vector3f[lights.size()];
+		for(int i = 0; i < lightPos.length; i++) {
+			Light l = lights.get(i);
+			lightPos[i] = l.getPosition();
+			lightColour[i] = l.getColour();
+			attenuation[i] = l.getAttenuation();
+		}
+		shader.lightPosition.load(lightPos);
+		shader.lightColour.load(lightColour);
+		shader.attenuation.load(attenuation);
+
 		renderer.render(entities);
 		shader.stop();
 		
@@ -113,7 +126,6 @@ public class MasterRenderer {
 	}
 	
 	public void cleanUp(){
-		shader.cleanUp();
 		terrainShader.cleanUp();
 		guiRenderer.cleanUp();
 	}

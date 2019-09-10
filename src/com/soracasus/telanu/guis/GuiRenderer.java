@@ -15,12 +15,12 @@ import com.soracasus.telanu.toolbox.Maths;
 public class GuiRenderer {
 
 	private final RawModel quad;
-	private GuiShader shader;
+	private GuiShaderOld shader;
 	
 	public GuiRenderer(Loader loader) {
 		float[] positions = {-1,1, -1, -1, 1, 1, 1, -1};
 		quad = loader.loadToVAO(positions, 2); // 2d vertex positions
-		shader = new GuiShader();
+		shader = new GuiShaderOld();
 	}
 	
 	public void render(List<GuiTexture> guis){

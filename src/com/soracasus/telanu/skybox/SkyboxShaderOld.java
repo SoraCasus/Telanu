@@ -5,10 +5,10 @@ import org.lwjgl.util.vector.Vector3f;
 
 import com.soracasus.telanu.entities.Camera;
 import com.soracasus.telanu.renderEngine.DisplayManager;
-import com.soracasus.telanu.shaders.ShaderProgram;
+import com.soracasus.telanu.shaders.ShaderProgram_Old;
 import com.soracasus.telanu.toolbox.Maths;
 
-public class SkyboxShader extends ShaderProgram{
+public class SkyboxShaderOld extends ShaderProgram_Old {
 
 	private static final String VERTEX_FILE = "src/com/soracasus/telanu/skybox/skyboxVertexShader.txt";
 	private static final String FRAGMENT_FILE = "src/com/soracasus/telanu/skybox/skyboxFragmentShader.txt";
@@ -24,7 +24,7 @@ public class SkyboxShader extends ShaderProgram{
 	
 	private float rotation = 0; // current rotation
 	
-	public SkyboxShader() {
+	public SkyboxShaderOld () {
 		super(VERTEX_FILE, FRAGMENT_FILE);
 	}
 	

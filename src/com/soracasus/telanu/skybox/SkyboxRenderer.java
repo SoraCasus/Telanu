@@ -64,7 +64,7 @@ public class SkyboxRenderer {
 	private RawModel cube;
 	private int dayTextureID;
 	private int nightTextureID;
-	private SkyboxShader shader;
+	private SkyboxShaderOld shader;
 	private float time = 0;
 	float delay = 0;	
 	public SkyboxRenderer(Loader loader, Matrix4f projectionMatrix, float delayTime){
@@ -72,7 +72,7 @@ public class SkyboxRenderer {
 		dayTextureID = loader.loadCubeMap(TEXTURE_FILES);
 		nightTextureID = loader.loadCubeMap(NIGHT_TEXTURE_FILES);
 		delay = delayTime;
-		shader = new SkyboxShader();
+		shader = new SkyboxShaderOld();
 		shader.start();
 		shader.connectTextureUnits();
 		shader.loadProjectionMatrix(projectionMatrix);

@@ -9,7 +9,7 @@ import com.soracasus.telanu.entities.Camera;
 import com.soracasus.telanu.entities.Light;
 import com.soracasus.telanu.toolbox.Maths;
 
-public class TerrainShader extends ShaderProgram {
+public class TerrainShaderOld extends ShaderProgram_Old {
 	
 	private static final int MAX_LIGHTS = 4;
 	private static final String VERTEX_FILE= "src/com/soracasus/telanu/shaders/terrainVertexShader.txt";
@@ -31,7 +31,7 @@ public class TerrainShader extends ShaderProgram {
 	private int location_blendMap;
 
 
-	public TerrainShader(){
+	public TerrainShaderOld (){
 		super(VERTEX_FILE, FRAGMENT_FILE);
 	}
 	

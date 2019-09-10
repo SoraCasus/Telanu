@@ -10,7 +10,7 @@ import com.soracasus.telanu.entities.Camera;
 import com.soracasus.telanu.entities.Light;
 import com.soracasus.telanu.toolbox.Maths;
 
-public class StaticShader extends ShaderProgram{
+public class StaticShaderOld extends ShaderProgram_Old {
 
 	private static final int MAX_LIGHTS = 4;
 	private static final String VERTEX_FILE= "src/com/soracasus/telanu/shaders/vertexShader.txt";
@@ -29,7 +29,7 @@ public class StaticShader extends ShaderProgram{
 	private int location_numberOfRows;
 	private int location_offset;
 	
-	public StaticShader(){
+	public StaticShaderOld (){
 		super(VERTEX_FILE, FRAGMENT_FILE);
 	}
 	
